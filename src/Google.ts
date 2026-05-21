@@ -70,9 +70,21 @@ export default class Google {
     get model(): string { return this.#model; }
 
     // Heuristic. Gemini's REST countTokens API exists at
-    // /v1beta/models/{model}:countTokens but each call is an async
-    // round-trip; wiring it into the synchronous contract has a latency
-    // cost that pass-2 will evaluate.
+    // /v1beta/models/{model}:countTokens and would give exact counts,
+    // but it's async per-call. The plurnk-service Provider contract
+    // declares countTokens as sync (number), and packet assembly calls
+    // it 3-5 times per turn for section subtotals — wiring real REST
+    // tokenization would either (a) require evolving the contract to
+    // async, or (b) pre-encode the entire packet ahead of time. Neither
+    // is in scope today. Documenting the gap rather than papering over
+    // it with a contract-violating hack.
+    //
+    // For Gemini-family content the heuristic's chars/4 ratio is a
+    // moderate underestimate (Gemini's sentencepiece tokenizer tends
+    // to chars/3.5 for English in practice). Operators tracking
+    // budgets tightly should use Gemini's actual usage numbers (which
+    // come back exact on every wire response) rather than relying on
+    // the packet subtotals.
     countTokens(text: string): number {
         return text.length === 0 ? 0 : Math.ceil(text.length / 4);
     }
