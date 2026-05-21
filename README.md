@@ -38,7 +38,16 @@ Pass-2 may revisit with an opt-in `GEMINI_PRICING_SOURCE=cloud_billing` env for 
 
 ## tokenization
 
-Heuristic 4-chars-per-token. Gemini's REST `countTokens` endpoint (`/v1beta/models/{model}:countTokens`) is real and exact, but each call is an async round-trip; wiring it into the synchronous `provider.countTokens(text): number` contract has a latency cost that pass-2 will evaluate (likely behind an opt-in env once the precision matters).
+Heuristic `~4 chars/token`. Gemini does not have a synchronous tokenizer on npm — its sentencepiece variant isn't published in the standard tokenizer ecosystem the way `gpt-tokenizer` (cl100k_base) or `llama-tokenizer-js` are.
+
+Gemini's REST `countTokens` endpoint (`/v1beta/models/{model}:countTokens`) is real and exact, but every call is an async round-trip. The plurnk-service `Provider.countTokens(text): number` contract is synchronous and gets invoked 3-5 times per turn during packet assembly. Wiring real REST tokenization would either:
+
+1. Require evolving the contract to async (cost: every other sibling pays a Promise wrap for no benefit; engine's packet-build hot path takes the trampoline)
+2. Or pre-encode the entire packet ahead of time as a batch call (cost: complex caching, ordering, and invalidation logic)
+
+Neither is in scope. Honest gap, documented.
+
+**Practical workaround:** packet subtotals are slightly low for Gemini traffic (chars/4 vs Gemini's ~chars/3.5 reality). Operators tracking budgets tightly should consult Gemini's wire-reported `usage.prompt` on each completion, which IS exact and lands in `turns.usage_prompt` accurately. Don't rely on `packet.system.tokens` / `packet.user.tokens` for tight budgeting on Gemini routes.
 
 ## reasoning
 
