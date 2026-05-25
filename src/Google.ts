@@ -1,6 +1,5 @@
 import { chatCompletionStream, OpenAiHttpError } from "./openaiStream.ts";
 
-const DEFAULT_FETCH_TIMEOUT_MS = 600000;
 const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 const COMPAT_URL = `${BASE_URL}/openai`;
 
@@ -56,13 +55,11 @@ export default class Google {
         if (apiKey === undefined || apiKey.length === 0) {
             throw new Error("google provider: GEMINI_API_KEY must be set");
         }
-        const fetchTimeoutMs = env.PLURNK_PROVIDER_FETCH_TIMEOUT !== undefined && env.PLURNK_PROVIDER_FETCH_TIMEOUT.length > 0
-            ? Number(env.PLURNK_PROVIDER_FETCH_TIMEOUT)
-            : DEFAULT_FETCH_TIMEOUT_MS;
+        const fetchTimeoutMs = parseRequiredInt(env.PLURNK_FETCH_TIMEOUT, "PLURNK_FETCH_TIMEOUT");
+        const reasonBudget = parseRequiredInt(env.PLURNK_REASON, "PLURNK_REASON");
         const contextSize = await fetchContextSize({ apiKey, model, fetchTimeoutMs });
         return new Google({
-            apiKey, model, contextSize, fetchTimeoutMs,
-            reasonBudget: Number(env.PLURNK_REASON ?? "0"),
+            apiKey, model, contextSize, fetchTimeoutMs, reasonBudget,
         });
     }
 
@@ -135,6 +132,17 @@ const reasoningEffortFromBudget = (budget: number): "low" | "medium" | "high" | 
     if (budget <= 1000) return "low";
     if (budget <= 4000) return "medium";
     return "high";
+};
+
+const parseRequiredInt = (raw: string | undefined, name: string): number => {
+    if (raw === undefined || raw.length === 0) {
+        throw new Error(`google provider: ${name} must be set`);
+    }
+    const n = Number(raw);
+    if (!Number.isFinite(n)) {
+        throw new Error(`google provider: ${name} must be a number (got "${raw}")`);
+    }
+    return n;
 };
 
 // /v1beta/models/{model} requires `?key=` (Bearer 401s on this endpoint

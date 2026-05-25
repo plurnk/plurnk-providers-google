@@ -20,11 +20,13 @@ const provider = await Google.fromEnv(process.env, "gemini-2.5-flash");
 
 ## env
 
+No fallback defaults — required vars throw at `fromEnv` if missing or unparseable. Defaults belong in `plurnk-service`'s `.env.example` cascade, not in library code.
+
 | Variable | Required | Notes |
 |---|---|---|
 | `GEMINI_API_KEY` | yes | AI Studio key from aistudio.google.com/apikey |
-| `PLURNK_REASON` | no | Universal reasoning budget; sibling translates to `reasoning_effort` tier (low / medium / high) on the OpenAI-compat endpoint for 2.5+ thinking models |
-| `PLURNK_PROVIDER_FETCH_TIMEOUT` | no | Universal fetch timeout in ms; default `600000` |
+| `PLURNK_REASON` | yes | Universal reasoning budget (PROVIDERS.md §3.8); sibling translates to `reasoning_effort` tier (low / medium / high) on the OpenAI-compat endpoint for 2.5+ thinking models. `0` disables |
+| `PLURNK_FETCH_TIMEOUT` | yes | Universal fetch timeout in ms (PROVIDERS.md §3.9) |
 
 ## context window
 

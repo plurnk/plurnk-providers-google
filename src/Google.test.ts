@@ -1,6 +1,23 @@
-import test from "node:test";
+import test, { type TestContext } from "node:test";
 import assert from "node:assert/strict";
 import Google from "./Google.ts";
+
+// Minimum env that satisfies all required guards in fromEnv. Tests that need
+// to exercise one specific knob override its key on top of this.
+const baseEnv = Object.freeze({
+    GEMINI_API_KEY: "k-test",
+    PLURNK_FETCH_TIMEOUT: "600000",
+    PLURNK_REASON: "0",
+});
+
+const stubFetchOk = (t: TestContext, inputTokenLimit = 1_048_576): void => {
+    const originalFetch = globalThis.fetch;
+    t.after(() => { globalThis.fetch = originalFetch; });
+    globalThis.fetch = (async () => ({
+        ok: true,
+        json: async () => ({ inputTokenLimit }),
+    })) as unknown as typeof fetch;
+};
 
 test("fromEnv: throws when GEMINI_API_KEY is unset", async () => {
     await assert.rejects(
@@ -9,15 +26,37 @@ test("fromEnv: throws when GEMINI_API_KEY is unset", async () => {
     );
 });
 
-test("fromEnv: resolves contextSize from /v1beta/models/{model}", async (t) => {
-    const originalFetch = globalThis.fetch;
-    t.after(() => { globalThis.fetch = originalFetch; });
-    globalThis.fetch = (async () => ({
-        ok: true,
-        json: async () => ({ inputTokenLimit: 1_048_576 }),
-    })) as unknown as typeof fetch;
+test("fromEnv: throws when PLURNK_FETCH_TIMEOUT is unset", async () => {
+    await assert.rejects(
+        () => Google.fromEnv({ GEMINI_API_KEY: "k-test", PLURNK_REASON: "0" }, "gemini-2.5-flash"),
+        /PLURNK_FETCH_TIMEOUT must be set/,
+    );
+});
 
-    const p = await Google.fromEnv({ GEMINI_API_KEY: "k-test" }, "gemini-2.5-flash");
+test("fromEnv: throws when PLURNK_FETCH_TIMEOUT is non-numeric", async () => {
+    await assert.rejects(
+        () => Google.fromEnv({ ...baseEnv, PLURNK_FETCH_TIMEOUT: "abc" }, "gemini-2.5-flash"),
+        /PLURNK_FETCH_TIMEOUT must be a number/,
+    );
+});
+
+test("fromEnv: throws when PLURNK_REASON is unset", async () => {
+    await assert.rejects(
+        () => Google.fromEnv({ GEMINI_API_KEY: "k-test", PLURNK_FETCH_TIMEOUT: "600000" }, "gemini-2.5-flash"),
+        /PLURNK_REASON must be set/,
+    );
+});
+
+test("fromEnv: throws when PLURNK_REASON is non-numeric", async () => {
+    await assert.rejects(
+        () => Google.fromEnv({ ...baseEnv, PLURNK_REASON: "lots" }, "gemini-2.5-flash"),
+        /PLURNK_REASON must be a number/,
+    );
+});
+
+test("fromEnv: resolves contextSize from /v1beta/models/{model}", async (t) => {
+    stubFetchOk(t, 1_048_576);
+    const p = await Google.fromEnv({ ...baseEnv }, "gemini-2.5-flash");
     assert.equal(p.contextSize, 1_048_576);
     assert.equal(p.model, "gemini-2.5-flash");
 });
@@ -31,7 +70,7 @@ test("fromEnv: uses ?key=<apiKey> on the models endpoint", async (t) => {
         return { ok: true, json: async () => ({ inputTokenLimit: 32768 }) };
     }) as unknown as typeof fetch;
 
-    await Google.fromEnv({ GEMINI_API_KEY: "k-test" }, "gemini-1.5-pro");
+    await Google.fromEnv({ ...baseEnv }, "gemini-1.5-pro");
     assert.match(String(captured), /\?key=k-test$/);
 });
 
@@ -44,7 +83,7 @@ test("fromEnv: throws when inputTokenLimit absent", async (t) => {
     })) as unknown as typeof fetch;
 
     await assert.rejects(
-        () => Google.fromEnv({ GEMINI_API_KEY: "k-test" }, "unknown-model"),
+        () => Google.fromEnv({ ...baseEnv }, "unknown-model"),
         /no inputTokenLimit/,
     );
 });
@@ -59,7 +98,7 @@ test("fromEnv: throws when models endpoint returns non-2xx", async (t) => {
     })) as unknown as typeof fetch;
 
     await assert.rejects(
-        () => Google.fromEnv({ GEMINI_API_KEY: "k-test" }, "gemini-2.5-flash"),
+        () => Google.fromEnv({ ...baseEnv }, "gemini-2.5-flash"),
         /returned 403/,
     );
 });
