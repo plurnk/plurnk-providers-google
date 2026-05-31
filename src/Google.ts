@@ -9,9 +9,49 @@ import {
     parseRequiredInt,
     requireEnv,
     type Provider,
+    type ProviderUsage,
 } from "@plurnk/plurnk-providers";
 
 const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
+
+// Gemini exposes no runtime pricing endpoint (unlike openrouter/xai/cloudflare),
+// so rates are a static table — paid-tier text prices from
+// ai.google.dev/gemini-api/docs/pricing, captured 2026-05-31. Stored as
+// pico-USD per token ($/1M tokens × 1e6). `long` carries the >200k-prompt tier
+// where it differs (Pro models); Flash/Flash-Lite are flat.
+type Rate = { input: number; output: number; cached: number };
+type GeminiPricing = Rate & { long?: Rate };
+
+const M = 1e6; // $/1M-tokens → pico-USD/token
+// Longest-prefix match wins, so flash-lite must precede flash.
+const PRICING_BY_PREFIX: ReadonlyArray<[string, GeminiPricing]> = Object.freeze([
+    ["gemini-2.5-flash-lite", { input: 0.10 * M, output: 0.40 * M, cached: 0.01 * M }],
+    ["gemini-2.5-flash", { input: 0.30 * M, output: 2.50 * M, cached: 0.03 * M }],
+    ["gemini-2.5-pro", { input: 1.25 * M, output: 10.0 * M, cached: 0.125 * M, long: { input: 2.50 * M, output: 15.0 * M, cached: 0.25 * M } }],
+    ["gemini-3.1-flash-lite", { input: 0.25 * M, output: 1.50 * M, cached: 0.025 * M }],
+    ["gemini-3.1-pro", { input: 2.00 * M, output: 12.0 * M, cached: 0.20 * M, long: { input: 4.00 * M, output: 18.0 * M, cached: 0.40 * M } }],
+    ["gemini-3.5-flash", { input: 1.50 * M, output: 9.00 * M, cached: 0.15 * M }],
+]);
+
+const LONG_CONTEXT_THRESHOLD = 200_000;
+
+const pricingForModel = (model: string): GeminiPricing | null => {
+    let best: { prefix: string; rate: GeminiPricing } | null = null;
+    for (const [prefix, rate] of PRICING_BY_PREFIX) {
+        if (model.startsWith(prefix) && (best === null || prefix.length > best.prefix.length)) best = { prefix, rate };
+    }
+    return best?.rate ?? null;
+};
+
+// Cost from the static table. Cached tokens are a subset of prompt billed at
+// the cache rate; the rest of prompt at input rate; completion at output rate.
+// Unknown model → 0 (SPEC §2: no known rates).
+export const geminiCostFor = (pricing: GeminiPricing | null, usage: ProviderUsage): number => {
+    if (pricing === null) return 0;
+    const tier = pricing.long !== undefined && usage.prompt > LONG_CONTEXT_THRESHOLD ? pricing.long : pricing;
+    const nonCachedPrompt = Math.max(0, usage.prompt - usage.cached);
+    return Math.round(nonCachedPrompt * tier.input + usage.cached * tier.cached + usage.completion * tier.output);
+};
 
 export default class Google {
     static async fromEnv(env: NodeJS.ProcessEnv, model: string): Promise<Provider> {
@@ -20,6 +60,7 @@ export default class Google {
         const reasonBudget = parseRequiredInt(env.PLURNK_REASON, "PLURNK_REASON", "google");
 
         const contextSize = await fetchContextSize({ apiKey, model, fetchTimeoutMs });
+        const pricing = pricingForModel(model);
 
         return new OpenAICompatProvider({
             model,
@@ -33,8 +74,8 @@ export default class Google {
             reasoningStyle: "effort",
             // Tokenizer left to the framework default (chars/4 heuristic):
             // Gemini's exact REST countTokens is async-per-call and the
-            // Provider contract declares countTokens sync. costFor likewise
-            // left to default 0 — Gemini exposes no runtime pricing API.
+            // Provider contract declares countTokens sync.
+            costFor: (usage) => geminiCostFor(pricing, usage),
         });
     }
 }
