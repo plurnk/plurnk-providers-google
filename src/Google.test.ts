@@ -1,4 +1,4 @@
-import test, { type TestContext } from "node:test";
+import test, { mock } from "node:test";
 import assert from "node:assert/strict";
 import Google from "./Google.ts";
 
@@ -10,14 +10,19 @@ const baseEnv = Object.freeze({
     PLURNK_REASON: "0",
 });
 
-const stubFetchOk = (t: TestContext, inputTokenLimit = 1_048_576): void => {
-    const originalFetch = globalThis.fetch;
-    t.after(() => { globalThis.fetch = originalFetch; });
-    globalThis.fetch = (async () => ({
-        ok: true,
-        json: async () => ({ inputTokenLimit }),
-    })) as unknown as typeof fetch;
+// Mock the /v1beta/models/{model} probe. Returns the model-info JSON and
+// records the requested URLs for endpoint/auth assertions.
+const mockModelInfo = (info: unknown) => {
+    const calls: string[] = [];
+    mock.method(globalThis, "fetch", async (url: string) => {
+        calls.push(String(url));
+        return new Response(JSON.stringify(info), { status: 200 });
+    });
+    return calls;
 };
+test.afterEach(() => mock.restoreAll());
+
+// — fromEnv env guards —
 
 test("fromEnv: throws when GEMINI_API_KEY is unset", async () => {
     await assert.rejects(
@@ -34,6 +39,7 @@ test("fromEnv: throws when PLURNK_FETCH_TIMEOUT is unset", async () => {
 });
 
 test("fromEnv: throws when PLURNK_FETCH_TIMEOUT is non-numeric", async () => {
+    mockModelInfo({ inputTokenLimit: 1_048_576 });
     await assert.rejects(
         () => Google.fromEnv({ ...baseEnv, PLURNK_FETCH_TIMEOUT: "abc" }, "gemini-2.5-flash"),
         /PLURNK_FETCH_TIMEOUT must be a number/,
@@ -48,81 +54,55 @@ test("fromEnv: throws when PLURNK_REASON is unset", async () => {
 });
 
 test("fromEnv: throws when PLURNK_REASON is non-numeric", async () => {
+    mockModelInfo({ inputTokenLimit: 1_048_576 });
     await assert.rejects(
         () => Google.fromEnv({ ...baseEnv, PLURNK_REASON: "lots" }, "gemini-2.5-flash"),
         /PLURNK_REASON must be a number/,
     );
 });
 
-test("fromEnv: resolves contextSize from /v1beta/models/{model}", async (t) => {
-    stubFetchOk(t, 1_048_576);
+// — model-info probe —
+
+test("fromEnv: resolves contextSize from /v1beta/models/{model}", async () => {
+    mockModelInfo({ inputTokenLimit: 1_048_576 });
     const p = await Google.fromEnv({ ...baseEnv }, "gemini-2.5-flash");
     assert.equal(p.contextSize, 1_048_576);
     assert.equal(p.model, "gemini-2.5-flash");
 });
 
-test("fromEnv: uses ?key=<apiKey> on the models endpoint", async (t) => {
-    let captured: string | URL | null = null;
-    const originalFetch = globalThis.fetch;
-    t.after(() => { globalThis.fetch = originalFetch; });
-    globalThis.fetch = (async (url: string | URL) => {
-        captured = url;
-        return { ok: true, json: async () => ({ inputTokenLimit: 32768 }) };
-    }) as unknown as typeof fetch;
-
+test("fromEnv: uses ?key=<apiKey> on the models endpoint (not Bearer)", async () => {
+    const calls = mockModelInfo({ inputTokenLimit: 32768 });
     await Google.fromEnv({ ...baseEnv }, "gemini-1.5-pro");
-    assert.match(String(captured), /\?key=k-test$/);
+    assert.match(calls[0]!, /\/v1beta\/models\/gemini-1\.5-pro\?key=k-test$/);
 });
 
-test("fromEnv: throws when inputTokenLimit absent", async (t) => {
-    const originalFetch = globalThis.fetch;
-    t.after(() => { globalThis.fetch = originalFetch; });
-    globalThis.fetch = (async () => ({
-        ok: true,
-        json: async () => ({}),
-    })) as unknown as typeof fetch;
-
+test("fromEnv: throws when inputTokenLimit absent", async () => {
+    mockModelInfo({});
     await assert.rejects(
         () => Google.fromEnv({ ...baseEnv }, "unknown-model"),
         /no inputTokenLimit/,
     );
 });
 
-test("fromEnv: throws when models endpoint returns non-2xx", async (t) => {
-    const originalFetch = globalThis.fetch;
-    t.after(() => { globalThis.fetch = originalFetch; });
-    globalThis.fetch = (async () => ({
-        ok: false,
-        status: 403,
-        text: async () => "permission denied",
-    })) as unknown as typeof fetch;
-
+test("fromEnv: throws when models endpoint returns non-2xx", async () => {
+    mock.method(globalThis, "fetch", async () => new Response("permission denied", { status: 403 }));
     await assert.rejects(
         () => Google.fromEnv({ ...baseEnv }, "gemini-2.5-flash"),
         /returned 403/,
     );
 });
 
-test("contextSize and model exposed on instance", () => {
-    const p = new Google({
-        apiKey: "k", model: "gemini-2.5-flash", contextSize: 1_048_576,
-        fetchTimeoutMs: 1, reasonBudget: 0,
-    });
-    assert.equal(p.contextSize, 1_048_576);
-    assert.equal(p.model, "gemini-2.5-flash");
-});
+// — Provider surface on the constructed instance —
 
-test("costFor: returns 0 unconditionally", () => {
-    const p = new Google({
-        apiKey: "k", model: "m", contextSize: 1, fetchTimeoutMs: 1, reasonBudget: 0,
-    });
+test("costFor: returns 0 unconditionally (no runtime pricing)", async () => {
+    mockModelInfo({ inputTokenLimit: 1_048_576 });
+    const p = await Google.fromEnv({ ...baseEnv }, "gemini-2.5-flash");
     assert.equal(p.costFor({ prompt: 10000, completion: 5000, cached: 1000, total: 16000 }), 0);
 });
 
-test("countTokens: heuristic returns 0 for empty, ceil(len/4) otherwise", () => {
-    const p = new Google({
-        apiKey: "k", model: "m", contextSize: 1, fetchTimeoutMs: 1, reasonBudget: 0,
-    });
+test("countTokens: heuristic returns 0 for empty, ceil(len/4) otherwise", async () => {
+    mockModelInfo({ inputTokenLimit: 1_048_576 });
+    const p = await Google.fromEnv({ ...baseEnv }, "gemini-2.5-flash");
     assert.equal(p.countTokens(""), 0);
     assert.equal(p.countTokens("abcd"), 1);
     assert.equal(p.countTokens("abcde"), 2);
