@@ -6,6 +6,7 @@
 
 import {
     OpenAICompatProvider,
+    computeCost,
     parseRequiredInt,
     requireEnv,
     type Provider,
@@ -43,14 +44,13 @@ const pricingForModel = (model: string): GeminiPricing | null => {
     return best?.rate ?? null;
 };
 
-// Cost from the static table. Cached tokens are a subset of prompt billed at
-// the cache rate; the rest of prompt at input rate; completion at output rate.
-// Unknown model → 0 (SPEC §2: no known rates).
+// Cost from the static table, delegated to the framework's computeCost (which
+// bills completion + reasoning at the output rate). Picks the >200k long tier
+// where the model defines one. Unknown model → 0 (SPEC §2: no known rates).
 export const geminiCostFor = (pricing: GeminiPricing | null, usage: ProviderUsage): number => {
     if (pricing === null) return 0;
     const tier = pricing.long !== undefined && usage.prompt > LONG_CONTEXT_THRESHOLD ? pricing.long : pricing;
-    const nonCachedPrompt = Math.max(0, usage.prompt - usage.cached);
-    return Math.round(nonCachedPrompt * tier.input + usage.cached * tier.cached + usage.completion * tier.output);
+    return computeCost(usage, { input: tier.input, output: tier.output, cached: tier.cached });
 };
 
 export default class Google {
