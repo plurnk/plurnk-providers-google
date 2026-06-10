@@ -8,6 +8,7 @@ import {
     OpenAICompatProvider,
     computeCost,
     parseRequiredInt,
+    providerSource,
     requireEnv,
     type Provider,
     type ProviderUsage,
@@ -76,6 +77,7 @@ export default class Google {
             // Gemini's exact REST countTokens is async-per-call and the
             // Provider contract declares countTokens sync.
             costFor: (usage) => geminiCostFor(pricing, usage),
+            source: providerSource("google"),
         });
     }
 }

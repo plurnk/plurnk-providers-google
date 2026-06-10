@@ -22,6 +22,21 @@ const mockModelInfo = (info: unknown) => {
 };
 test.afterEach(() => mock.restoreAll());
 
+test("generate failure carries the provider:google telemetry source (SPEC §12)", async () => {
+    const { ProviderError } = await import("@plurnk/plurnk-providers");
+    mock.method(globalThis, "fetch", async (url: string) => {
+        if (String(url).includes("/openai/chat/completions")) return new Response("rate limited", { status: 429 });
+        return new Response(JSON.stringify({ inputTokenLimit: 1_048_576 }), { status: 200 });
+    });
+    const p = await Google.fromEnv({ ...baseEnv }, "gemini-2.5-flash");
+    await assert.rejects(() => p.generate({ messages: [] }), (err: unknown) => {
+        assert.ok(err instanceof ProviderError);
+        assert.equal(err.kind, "rate_limit");
+        assert.equal(err.toTelemetryEvent().source, "provider:google");
+        return true;
+    });
+});
+
 // — fromEnv env guards —
 
 test("fromEnv: throws when GEMINI_API_KEY is unset", async () => {
@@ -42,7 +57,7 @@ test("fromEnv: throws when PLURNK_FETCH_TIMEOUT is non-numeric", async () => {
     mockModelInfo({ inputTokenLimit: 1_048_576 });
     await assert.rejects(
         () => Google.fromEnv({ ...baseEnv, PLURNK_FETCH_TIMEOUT: "abc" }, "gemini-2.5-flash"),
-        /PLURNK_FETCH_TIMEOUT must be a number/,
+        /PLURNK_FETCH_TIMEOUT must be a non-negative integer/,
     );
 });
 
@@ -57,7 +72,7 @@ test("fromEnv: throws when PLURNK_REASON is non-numeric", async () => {
     mockModelInfo({ inputTokenLimit: 1_048_576 });
     await assert.rejects(
         () => Google.fromEnv({ ...baseEnv, PLURNK_REASON: "lots" }, "gemini-2.5-flash"),
-        /PLURNK_REASON must be a number/,
+        /PLURNK_REASON must be a non-negative integer/,
     );
 });
 
