@@ -1,6 +1,6 @@
 {
     "name": "@plurnk/plurnk-providers-google",
-    "version": "0.2.9",
+    "version": "0.3.0",
     "description": "Google Gemini provider for plurnk-service. Routes google/{model} aliases through Gemini's OpenAI-compatible chat-completions endpoint; resolves context window from /v1beta/models at fromEnv time.",
     "type": "module",
     "license": "MIT",
@@ -36,7 +36,7 @@
         "@types/node": "^25.9.1",
         "typescript": "^6.0.3"
     },
-    "dependencies": {
-        "@plurnk/plurnk-providers": "0.1.10"
+    "peerDependencies": {
+        "@plurnk/plurnk-providers": "0.2.x"
     }
 }
