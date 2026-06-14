@@ -8,7 +8,6 @@ const baseEnv = Object.freeze({
     GEMINI_API_KEY: "k-test",
     PLURNK_FETCH_TIMEOUT: "600000",
     PLURNK_REASON: "0",
-    PLURNK_PROVIDERS_THINKING: "0",
     PLURNK_PROVIDERS_REASONING: "1",
 });
 
@@ -31,7 +30,7 @@ test("generate failure carries the provider:google telemetry source (SPEC §12)"
         return new Response(JSON.stringify({ inputTokenLimit: 1_048_576 }), { status: 200 });
     });
     const p = await Google.fromEnv({ ...baseEnv }, "gemini-2.5-flash");
-    await assert.rejects(() => p.generate({ messages: [] }), (err: unknown) => {
+    await assert.rejects(() => p.generate({ runId: "r", messages: [] }), (err: unknown) => {
         assert.ok(err instanceof ProviderError);
         assert.equal(err.kind, "rate_limit");
         assert.equal(err.toTelemetryEvent().source, "provider:google");
