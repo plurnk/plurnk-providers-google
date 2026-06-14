@@ -59,7 +59,7 @@ export default class Google {
     static async fromEnv(env: NodeJS.ProcessEnv, model: string): Promise<Provider> {
         const apiKey = requireEnv(env.GEMINI_API_KEY, "GEMINI_API_KEY", "google");
         const fetchTimeoutMs = parseRequiredInt(env.PLURNK_FETCH_TIMEOUT, "PLURNK_FETCH_TIMEOUT", "google");
-        const reasonBudget = parseRequiredInt(env.PLURNK_REASON, "PLURNK_REASON", "google");
+        const reasonBudget = parseRequiredInt(env.PLURNK_PROVIDERS_REASON_LEVEL, "PLURNK_PROVIDERS_REASON_LEVEL", "google");
 
         const contextSize = await fetchContextSize({ apiKey, model, fetchTimeoutMs });
         const pricing = pricingForModel(model);
