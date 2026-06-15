@@ -9,6 +9,7 @@ import {
     computeCost,
     parseRequiredInt,
     reasoningBudgetFromEnv,
+    planFromEnv,
     providerSource,
     requireEnv,
     type Provider,
@@ -79,6 +80,7 @@ export default class Google {
             // Provider contract declares countTokens sync.
             costFor: (usage) => geminiCostFor(pricing, usage),
             source: providerSource("google"),
+            plan: planFromEnv(env, "google"),
         });
     }
 }
