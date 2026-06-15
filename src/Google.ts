@@ -8,7 +8,7 @@ import {
     OpenAICompatProvider,
     computeCost,
     parseRequiredInt,
-    reasoningKnobsFromEnv,
+    reasoningBudgetFromEnv,
     providerSource,
     requireEnv,
     type Provider,
@@ -59,7 +59,7 @@ export default class Google {
     static async fromEnv(env: NodeJS.ProcessEnv, model: string): Promise<Provider> {
         const apiKey = requireEnv(env.GEMINI_API_KEY, "GEMINI_API_KEY", "google");
         const fetchTimeoutMs = parseRequiredInt(env.PLURNK_FETCH_TIMEOUT, "PLURNK_FETCH_TIMEOUT", "google");
-        const reasonBudget = parseRequiredInt(env.PLURNK_PROVIDERS_REASON_LEVEL, "PLURNK_PROVIDERS_REASON_LEVEL", "google");
+        const reasoningBudget = reasoningBudgetFromEnv(env, "google");
 
         const contextSize = await fetchContextSize({ apiKey, model, fetchTimeoutMs });
         const pricing = pricingForModel(model);
@@ -70,7 +70,7 @@ export default class Google {
             fetchTimeoutMs,
             headers: { Authorization: `Bearer ${apiKey}` },
             contextSize,
-            reasonBudget,
+            reasoningBudget,
             // Gemini 2.5+ thinking models honor reasoning_effort tiers; the
             // framework translates the numeric budget to low/medium/high.
             reasoningStyle: "effort",
@@ -79,7 +79,6 @@ export default class Google {
             // Provider contract declares countTokens sync.
             costFor: (usage) => geminiCostFor(pricing, usage),
             source: providerSource("google"),
-            ...reasoningKnobsFromEnv(env, "google"),
         });
     }
 }

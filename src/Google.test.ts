@@ -7,8 +7,7 @@ import Google from "./Google.ts";
 const baseEnv = Object.freeze({
     GEMINI_API_KEY: "k-test",
     PLURNK_FETCH_TIMEOUT: "600000",
-    PLURNK_PROVIDERS_REASON_LEVEL: "0",
-    PLURNK_PROVIDERS_REASONING: "1",
+    PLURNK_PROVIDERS_REASONING_BUDGET: "0",
 });
 
 // Mock the /v1beta/models/{model} probe. Returns the model-info JSON and
@@ -49,7 +48,7 @@ test("fromEnv: throws when GEMINI_API_KEY is unset", async () => {
 
 test("fromEnv: throws when PLURNK_FETCH_TIMEOUT is unset", async () => {
     await assert.rejects(
-        () => Google.fromEnv({ GEMINI_API_KEY: "k-test", PLURNK_PROVIDERS_REASON_LEVEL: "0" }, "gemini-2.5-flash"),
+        () => Google.fromEnv({ GEMINI_API_KEY: "k-test", PLURNK_PROVIDERS_REASONING_BUDGET: "0" }, "gemini-2.5-flash"),
         /PLURNK_FETCH_TIMEOUT must be set/,
     );
 });
@@ -62,18 +61,18 @@ test("fromEnv: throws when PLURNK_FETCH_TIMEOUT is non-numeric", async () => {
     );
 });
 
-test("fromEnv: throws when PLURNK_PROVIDERS_REASON_LEVEL is unset", async () => {
+test("fromEnv: throws when PLURNK_PROVIDERS_REASONING_BUDGET is unset", async () => {
     await assert.rejects(
         () => Google.fromEnv({ GEMINI_API_KEY: "k-test", PLURNK_FETCH_TIMEOUT: "600000" }, "gemini-2.5-flash"),
-        /PLURNK_PROVIDERS_REASON_LEVEL must be set/,
+        /PLURNK_PROVIDERS_REASONING_BUDGET must be set/,
     );
 });
 
-test("fromEnv: throws when PLURNK_PROVIDERS_REASON_LEVEL is non-numeric", async () => {
+test("fromEnv: throws when PLURNK_PROVIDERS_REASONING_BUDGET is non-numeric", async () => {
     mockModelInfo({ inputTokenLimit: 1_048_576 });
     await assert.rejects(
-        () => Google.fromEnv({ ...baseEnv, PLURNK_PROVIDERS_REASON_LEVEL: "lots" }, "gemini-2.5-flash"),
-        /PLURNK_PROVIDERS_REASON_LEVEL must be a non-negative integer/,
+        () => Google.fromEnv({ ...baseEnv, PLURNK_PROVIDERS_REASONING_BUDGET: "lots" }, "gemini-2.5-flash"),
+        /PLURNK_PROVIDERS_REASONING_BUDGET must be an integer >= -1/,
     );
 });
 
