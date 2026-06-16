@@ -71,6 +71,7 @@ export default class Google {
             headers: { Authorization: `Bearer ${apiKey}` },
             contextSize,
             reasoningBudget,
+            retryAttempts: parseRequiredInt(env.PLURNK_PROVIDER_RETRY_ATTEMPTS, "PLURNK_PROVIDER_RETRY_ATTEMPTS", "google"),
             // Gemini 2.5+ thinking models honor reasoning_effort tiers; the
             // framework translates the numeric budget to low/medium/high.
             reasoningStyle: "effort",

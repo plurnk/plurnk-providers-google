@@ -8,6 +8,7 @@ const baseEnv = Object.freeze({
     GEMINI_API_KEY: "k-test",
     PLURNK_FETCH_TIMEOUT: "600000",
     PLURNK_PROVIDERS_REASONING_BUDGET: "0",
+    PLURNK_PROVIDER_RETRY_ATTEMPTS: "0",
 });
 
 // Mock the /v1beta/models/{model} probe. Returns the model-info JSON and
