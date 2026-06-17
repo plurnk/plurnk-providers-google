@@ -25,8 +25,9 @@ No fallback defaults — required vars throw at `fromEnv` if missing or unparsea
 | Variable | Required | Notes |
 |---|---|---|
 | `GEMINI_API_KEY` | yes | AI Studio key from aistudio.google.com/apikey |
-| `PLURNK_REASON` | yes | Universal reasoning budget (PROVIDERS.md §3.8); sibling translates to `reasoning_effort` tier (low / medium / high) on the OpenAI-compat endpoint for 2.5+ thinking models. `0` disables |
-| `PLURNK_FETCH_TIMEOUT` | yes | Universal fetch timeout in ms (PROVIDERS.md §3.9) |
+| `PLURNK_PROVIDERS_REASONING_BUDGET` | yes | Universal reasoning budget (SPEC §4); sibling translates to `reasoning_effort` tier (low / medium / high) on the OpenAI-compat endpoint for 2.5+ thinking models. `0` disables |
+| `PLURNK_FETCH_TIMEOUT` | yes | Universal fetch timeout in ms (SPEC §4) |
+| `PLURNK_PROVIDER_RETRY_ATTEMPTS` | yes | Transient-failure retry budget (SPEC §4): `0` disables; `N` retries on 429/5xx/timeout/network with exponential backoff, honoring `Retry-After`. |
 
 ## context window
 
@@ -53,9 +54,9 @@ Neither is in scope. Honest gap, documented.
 
 ## reasoning
 
-Gemini 2.5+ models support `reasoning_effort: low|medium|high` on the OpenAI-compat endpoint. PLURNK_REASON translates as:
+Gemini 2.5+ models support `reasoning_effort: low|medium|high` on the OpenAI-compat endpoint. PLURNK_PROVIDERS_REASONING_BUDGET translates as:
 
-| PLURNK_REASON | reasoning_effort |
+| PLURNK_PROVIDERS_REASONING_BUDGET | reasoning_effort |
 |---|---|
 | `0` (default) | omit |
 | `1`–`1000` | `low` |
