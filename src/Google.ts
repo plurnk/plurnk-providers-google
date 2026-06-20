@@ -57,7 +57,10 @@ export const geminiCostFor = (pricing: GeminiPricing | null, usage: ProviderUsag
 
 export default class Google {
     static async fromEnv(env: NodeJS.ProcessEnv, model: string): Promise<Provider> {
-        const apiKey = requireEnv(env.GEMINI_API_KEY, "GEMINI_API_KEY", "google");
+        // GEMINI_API_KEY wins over GOOGLE_API_KEY (the genai SDK does the reverse,
+        // but preferring the Gemini-specific var avoids a stray gcloud GOOGLE_API_KEY
+        // silently hijacking the intended key). Both are first-class in the wild.
+        const apiKey = requireEnv(env.GEMINI_API_KEY || env.GOOGLE_API_KEY, "GEMINI_API_KEY or GOOGLE_API_KEY", "google");
         const fetchTimeoutMs = parseRequiredInt(env.PLURNK_FETCH_TIMEOUT, "PLURNK_FETCH_TIMEOUT", "google");
         const reasoningBudget = reasoningBudgetFromEnv(env, "google");
 

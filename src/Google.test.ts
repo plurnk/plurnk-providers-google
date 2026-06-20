@@ -40,11 +40,23 @@ test("generate failure carries the provider:google telemetry source (SPEC §12)"
 
 // — fromEnv env guards —
 
-test("fromEnv: throws when GEMINI_API_KEY is unset", async () => {
+test("fromEnv: throws when neither GEMINI_API_KEY nor GOOGLE_API_KEY is set", async () => {
     await assert.rejects(
         () => Google.fromEnv({}, "gemini-2.5-flash"),
-        /GEMINI_API_KEY must be set/,
+        /GEMINI_API_KEY or GOOGLE_API_KEY must be set/,
     );
+});
+
+test("fromEnv: accepts GOOGLE_API_KEY as an alias, but GEMINI_API_KEY wins when both are set", async () => {
+    const rest = { PLURNK_FETCH_TIMEOUT: "600000", PLURNK_PROVIDERS_REASONING_BUDGET: "0", PLURNK_PROVIDER_RETRY_ATTEMPTS: "0" };
+    let calls = mockModelInfo({ inputTokenLimit: 1_048_576 });
+    await Google.fromEnv({ ...rest, GOOGLE_API_KEY: "g-only" }, "gemini-2.5-flash");
+    assert.ok(calls.some((u) => u.includes("key=g-only")), `GOOGLE_API_KEY alias used: ${calls[0]}`);
+    mock.restoreAll();
+
+    calls = mockModelInfo({ inputTokenLimit: 1_048_576 });
+    await Google.fromEnv({ ...rest, GEMINI_API_KEY: "gem", GOOGLE_API_KEY: "goog" }, "gemini-2.5-flash");
+    assert.ok(calls.some((u) => u.includes("key=gem")), `GEMINI_API_KEY wins: ${calls[0]}`);
 });
 
 test("fromEnv: throws when PLURNK_FETCH_TIMEOUT is unset", async () => {
