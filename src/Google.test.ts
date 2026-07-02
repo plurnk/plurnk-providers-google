@@ -6,7 +6,7 @@ import Google from "./Google.ts";
 // to exercise one specific knob override its key on top of this.
 const baseEnv = Object.freeze({
     GEMINI_API_KEY: "k-test",
-    PLURNK_FETCH_TIMEOUT: "600000",
+    PLURNK_PROVIDERS_FETCH_TIMEOUT: "600000",
     PLURNK_PROVIDERS_REASONING_BUDGET: "0",
     PLURNK_PROVIDERS_RETRY_ATTEMPTS: "0",
 });
@@ -48,7 +48,7 @@ test("fromEnv: throws when neither GEMINI_API_KEY nor GOOGLE_API_KEY is set", as
 });
 
 test("fromEnv: accepts GOOGLE_API_KEY as an alias, but GEMINI_API_KEY wins when both are set", async () => {
-    const rest = { PLURNK_FETCH_TIMEOUT: "600000", PLURNK_PROVIDERS_REASONING_BUDGET: "0", PLURNK_PROVIDERS_RETRY_ATTEMPTS: "0" };
+    const rest = { PLURNK_PROVIDERS_FETCH_TIMEOUT: "600000", PLURNK_PROVIDERS_REASONING_BUDGET: "0", PLURNK_PROVIDERS_RETRY_ATTEMPTS: "0" };
     let calls = mockModelInfo({ inputTokenLimit: 1_048_576 });
     await Google.fromEnv({ ...rest, GOOGLE_API_KEY: "g-only" }, "gemini-2.5-flash");
     assert.ok(calls.some((u) => u.includes("key=g-only")), `GOOGLE_API_KEY alias used: ${calls[0]}`);
@@ -59,24 +59,24 @@ test("fromEnv: accepts GOOGLE_API_KEY as an alias, but GEMINI_API_KEY wins when 
     assert.ok(calls.some((u) => u.includes("key=gem")), `GEMINI_API_KEY wins: ${calls[0]}`);
 });
 
-test("fromEnv: throws when PLURNK_FETCH_TIMEOUT is unset", async () => {
+test("fromEnv: throws when PLURNK_PROVIDERS_FETCH_TIMEOUT is unset", async () => {
     await assert.rejects(
         () => Google.fromEnv({ GEMINI_API_KEY: "k-test", PLURNK_PROVIDERS_REASONING_BUDGET: "0" }, "gemini-2.5-flash"),
-        /PLURNK_FETCH_TIMEOUT must be set/,
+        /PLURNK_PROVIDERS_FETCH_TIMEOUT must be set/,
     );
 });
 
-test("fromEnv: throws when PLURNK_FETCH_TIMEOUT is non-numeric", async () => {
+test("fromEnv: throws when PLURNK_PROVIDERS_FETCH_TIMEOUT is non-numeric", async () => {
     mockModelInfo({ inputTokenLimit: 1_048_576 });
     await assert.rejects(
-        () => Google.fromEnv({ ...baseEnv, PLURNK_FETCH_TIMEOUT: "abc" }, "gemini-2.5-flash"),
-        /PLURNK_FETCH_TIMEOUT must be a non-negative integer/,
+        () => Google.fromEnv({ ...baseEnv, PLURNK_PROVIDERS_FETCH_TIMEOUT: "abc" }, "gemini-2.5-flash"),
+        /PLURNK_PROVIDERS_FETCH_TIMEOUT must be a non-negative integer/,
     );
 });
 
 test("fromEnv: throws when PLURNK_PROVIDERS_REASONING_BUDGET is unset", async () => {
     await assert.rejects(
-        () => Google.fromEnv({ GEMINI_API_KEY: "k-test", PLURNK_FETCH_TIMEOUT: "600000" }, "gemini-2.5-flash"),
+        () => Google.fromEnv({ GEMINI_API_KEY: "k-test", PLURNK_PROVIDERS_FETCH_TIMEOUT: "600000" }, "gemini-2.5-flash"),
         /PLURNK_PROVIDERS_REASONING_BUDGET must be set/,
     );
 });

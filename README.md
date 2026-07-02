@@ -26,7 +26,7 @@ No fallback defaults — required vars throw at `fromEnv` if missing or unparsea
 |---|---|---|
 | `GEMINI_API_KEY` | yes | AI Studio key from aistudio.google.com/apikey. Alias `GOOGLE_API_KEY` also accepted (`GEMINI_API_KEY` wins) |
 | `PLURNK_PROVIDERS_REASONING_BUDGET` | yes | Universal reasoning budget (SPEC §4); sibling translates to `reasoning_effort` tier (low / medium / high) on the OpenAI-compat endpoint for 2.5+ thinking models. `0` disables |
-| `PLURNK_FETCH_TIMEOUT` | yes | Universal fetch timeout in ms (SPEC §4) |
+| `PLURNK_PROVIDERS_FETCH_TIMEOUT` | yes | Universal fetch timeout in ms (SPEC §4) |
 | `PLURNK_PROVIDERS_RETRY_ATTEMPTS` | yes | Transient-failure retry budget (SPEC §4): `0` disables; `N` retries on 429/5xx/timeout/network with exponential backoff, honoring `Retry-After`. |
 
 ## context window

@@ -61,7 +61,7 @@ export default class Google {
         // but preferring the Gemini-specific var avoids a stray gcloud GOOGLE_API_KEY
         // silently hijacking the intended key). Both are first-class in the wild.
         const apiKey = requireEnv(env.GEMINI_API_KEY || env.GOOGLE_API_KEY, "GEMINI_API_KEY or GOOGLE_API_KEY", "google");
-        const fetchTimeoutMs = parseRequiredInt(env.PLURNK_FETCH_TIMEOUT, "PLURNK_FETCH_TIMEOUT", "google");
+        const fetchTimeoutMs = parseRequiredInt(env.PLURNK_PROVIDERS_FETCH_TIMEOUT, "PLURNK_PROVIDERS_FETCH_TIMEOUT", "google");
         const reasoningBudget = reasoningBudgetFromEnv(env, "google");
 
         const contextSize = await fetchContextSize({ apiKey, model, fetchTimeoutMs });
