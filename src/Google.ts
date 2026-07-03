@@ -8,7 +8,7 @@ import {
     OpenAICompatProvider,
     computeCost,
     parseRequiredInt,
-    reasoningBudgetFromEnv,
+    thinkingFromEnv,
     providerSource,
     requireEnv,
     type Provider,
@@ -62,7 +62,7 @@ export default class Google {
         // silently hijacking the intended key). Both are first-class in the wild.
         const apiKey = requireEnv(env.GEMINI_API_KEY || env.GOOGLE_API_KEY, "GEMINI_API_KEY or GOOGLE_API_KEY", "google");
         const fetchTimeoutMs = parseRequiredInt(env.PLURNK_PROVIDERS_FETCH_TIMEOUT, "PLURNK_PROVIDERS_FETCH_TIMEOUT", "google");
-        const reasoningBudget = reasoningBudgetFromEnv(env, "google");
+        const thinking = thinkingFromEnv(env, "google");
 
         const contextSize = await fetchContextSize({ apiKey, model, fetchTimeoutMs });
         const pricing = pricingForModel(model);
@@ -73,7 +73,7 @@ export default class Google {
             fetchTimeoutMs,
             headers: { Authorization: `Bearer ${apiKey}` },
             contextSize,
-            reasoningBudget,
+            thinking,
             retryAttempts: parseRequiredInt(env.PLURNK_PROVIDERS_RETRY_ATTEMPTS, "PLURNK_PROVIDERS_RETRY_ATTEMPTS", "google"),
             // Gemini 2.5+ thinking models honor reasoning_effort tiers; the
             // framework translates the numeric budget to low/medium/high.
