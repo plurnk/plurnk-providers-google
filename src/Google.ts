@@ -9,6 +9,7 @@ import {
     computeCost,
     parseRequiredInt,
     thinkingFromEnv,
+    parseRequiredFloat,
     providerSource,
     requireEnv,
     type Provider,
@@ -74,6 +75,8 @@ export default class Google {
             headers: { Authorization: `Bearer ${apiKey}` },
             contextSize,
             thinking,
+            grammarTemperature: parseRequiredFloat(env.PLURNK_PROVIDERS_GRAMMAR_TEMPERATURE, "PLURNK_PROVIDERS_GRAMMAR_TEMPERATURE", "google", 0),
+            grammarRepeatPenalty: parseRequiredFloat(env.PLURNK_PROVIDERS_GRAMMAR_REPEAT_PENALTY, "PLURNK_PROVIDERS_GRAMMAR_REPEAT_PENALTY", "google", 0),
             retryAttempts: parseRequiredInt(env.PLURNK_PROVIDERS_RETRY_ATTEMPTS, "PLURNK_PROVIDERS_RETRY_ATTEMPTS", "google"),
             // Gemini 2.5+ thinking models honor reasoning_effort tiers; the
             // framework translates the numeric budget to low/medium/high.

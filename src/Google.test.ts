@@ -7,7 +7,7 @@ import Google from "./Google.ts";
 const baseEnv = Object.freeze({
     GEMINI_API_KEY: "k-test",
     PLURNK_PROVIDERS_FETCH_TIMEOUT: "600000",
-    PLURNK_PROVIDERS_THINKING: "off",
+    PLURNK_PROVIDERS_THINKING: "off", PLURNK_PROVIDERS_GRAMMAR_TEMPERATURE: "0.2", PLURNK_PROVIDERS_GRAMMAR_REPEAT_PENALTY: "1.15",
     PLURNK_PROVIDERS_RETRY_ATTEMPTS: "0",
 });
 
@@ -48,7 +48,7 @@ test("fromEnv: throws when neither GEMINI_API_KEY nor GOOGLE_API_KEY is set", as
 });
 
 test("fromEnv: accepts GOOGLE_API_KEY as an alias, but GEMINI_API_KEY wins when both are set", async () => {
-    const rest = { PLURNK_PROVIDERS_FETCH_TIMEOUT: "600000", PLURNK_PROVIDERS_THINKING: "off", PLURNK_PROVIDERS_RETRY_ATTEMPTS: "0" };
+    const rest = { PLURNK_PROVIDERS_FETCH_TIMEOUT: "600000", PLURNK_PROVIDERS_THINKING: "off", PLURNK_PROVIDERS_GRAMMAR_TEMPERATURE: "0.2", PLURNK_PROVIDERS_GRAMMAR_REPEAT_PENALTY: "1.15", PLURNK_PROVIDERS_RETRY_ATTEMPTS: "0" };
     let calls = mockModelInfo({ inputTokenLimit: 1_048_576 });
     await Google.fromEnv({ ...rest, GOOGLE_API_KEY: "g-only" }, "gemini-2.5-flash");
     assert.ok(calls.some((u) => u.includes("key=g-only")), `GOOGLE_API_KEY alias used: ${calls[0]}`);
