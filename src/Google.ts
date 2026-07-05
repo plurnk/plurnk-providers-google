@@ -9,6 +9,7 @@ import {
     computeCost,
     parseRequiredInt,
     thinkingFromEnv,
+    dataCaptureFromEnv,
     parseRequiredFloat,
     providerSource,
     requireEnv,
@@ -79,6 +80,8 @@ export default class Google {
             repeatPenalty: parseRequiredFloat(env.PLURNK_PROVIDERS_REPEAT_PENALTY, "PLURNK_PROVIDERS_REPEAT_PENALTY", "google", 0),
             retryDelayMs: parseRequiredInt(env.PLURNK_PROVIDERS_RETRY_DELAY, "PLURNK_PROVIDERS_RETRY_DELAY", "google"),
             retryAttempts: parseRequiredInt(env.PLURNK_PROVIDERS_RETRY_ATTEMPTS, "PLURNK_PROVIDERS_RETRY_ATTEMPTS", "google"),
+            // Opt-in data capture (#36), off by default, per-alias-scopable.
+            ...dataCaptureFromEnv(env, "google"),
             // Gemini 2.5+ thinking models honor reasoning_effort tiers; the
             // framework translates the numeric budget to low/medium/high.
             reasoningStyle: "effort",
