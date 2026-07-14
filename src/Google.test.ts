@@ -7,7 +7,7 @@ import Google from "./Google.ts";
 const baseEnv = Object.freeze({
     GEMINI_API_KEY: "k-test",
     PLURNK_PROVIDERS_FETCH_TIMEOUT: "600000",
-    PLURNK_PROVIDERS_THINKING: "off", PLURNK_PROVIDERS_TEMPERATURE: "0.2", PLURNK_PROVIDERS_REPEAT_PENALTY: "1.15", PLURNK_PROVIDERS_RETRY_DELAY: "1", PLURNK_PROVIDERS_PROBE_ATTEMPTS: "3", PLURNK_PROVIDERS_PROBE_DELAY: "1",
+    PLURNK_PROVIDERS_REASONING: "off", PLURNK_PROVIDERS_TEMPERATURE: "0.2", PLURNK_PROVIDERS_REPEAT_PENALTY: "1.15", PLURNK_PROVIDERS_FREQUENCY_PENALTY: "0.4", PLURNK_PROVIDERS_RETRY_DELAY: "1", PLURNK_PROVIDERS_PROBE_ATTEMPTS: "3", PLURNK_PROVIDERS_PROBE_DELAY: "1",
     PLURNK_PROVIDERS_RETRY_ATTEMPTS: "0",
 });
 
@@ -48,7 +48,7 @@ test("fromEnv: throws when neither GEMINI_API_KEY nor GOOGLE_API_KEY is set", as
 });
 
 test("fromEnv: accepts GOOGLE_API_KEY as an alias, but GEMINI_API_KEY wins when both are set", async () => {
-    const rest = { PLURNK_PROVIDERS_FETCH_TIMEOUT: "600000", PLURNK_PROVIDERS_THINKING: "off", PLURNK_PROVIDERS_TEMPERATURE: "0.2", PLURNK_PROVIDERS_REPEAT_PENALTY: "1.15", PLURNK_PROVIDERS_RETRY_DELAY: "1", PLURNK_PROVIDERS_PROBE_ATTEMPTS: "3", PLURNK_PROVIDERS_PROBE_DELAY: "1", PLURNK_PROVIDERS_RETRY_ATTEMPTS: "0" };
+    const rest = { PLURNK_PROVIDERS_FETCH_TIMEOUT: "600000", PLURNK_PROVIDERS_REASONING: "off", PLURNK_PROVIDERS_TEMPERATURE: "0.2", PLURNK_PROVIDERS_REPEAT_PENALTY: "1.15", PLURNK_PROVIDERS_FREQUENCY_PENALTY: "0.4", PLURNK_PROVIDERS_RETRY_DELAY: "1", PLURNK_PROVIDERS_PROBE_ATTEMPTS: "3", PLURNK_PROVIDERS_PROBE_DELAY: "1", PLURNK_PROVIDERS_RETRY_ATTEMPTS: "0" };
     let calls = mockModelInfo({ inputTokenLimit: 1_048_576 });
     await Google.fromEnv({ ...rest, GOOGLE_API_KEY: "g-only" }, "gemini-2.5-flash");
     assert.ok(calls.some((u) => u.includes("key=g-only")), `GOOGLE_API_KEY alias used: ${calls[0]}`);
@@ -61,7 +61,7 @@ test("fromEnv: accepts GOOGLE_API_KEY as an alias, but GEMINI_API_KEY wins when 
 
 test("fromEnv: throws when PLURNK_PROVIDERS_FETCH_TIMEOUT is unset", async () => {
     await assert.rejects(
-        () => Google.fromEnv({ GEMINI_API_KEY: "k-test", PLURNK_PROVIDERS_THINKING: "off" }, "gemini-2.5-flash"),
+        () => Google.fromEnv({ GEMINI_API_KEY: "k-test", PLURNK_PROVIDERS_REASONING: "off" }, "gemini-2.5-flash"),
         /PLURNK_PROVIDERS_FETCH_TIMEOUT must be set/,
     );
 });
@@ -74,18 +74,18 @@ test("fromEnv: throws when PLURNK_PROVIDERS_FETCH_TIMEOUT is non-numeric", async
     );
 });
 
-test("fromEnv: throws when PLURNK_PROVIDERS_THINKING is unset", async () => {
+test("fromEnv: throws when PLURNK_PROVIDERS_REASONING is unset", async () => {
     await assert.rejects(
         () => Google.fromEnv({ GEMINI_API_KEY: "k-test", PLURNK_PROVIDERS_FETCH_TIMEOUT: "600000" }, "gemini-2.5-flash"),
-        /PLURNK_PROVIDERS_THINKING must be set/,
+        /PLURNK_PROVIDERS_REASONING must be set/,
     );
 });
 
-test("fromEnv: throws when PLURNK_PROVIDERS_THINKING is not a valid mode", async () => {
+test("fromEnv: throws when PLURNK_PROVIDERS_REASONING is not a valid mode", async () => {
     mockModelInfo({ inputTokenLimit: 1_048_576 });
     await assert.rejects(
-        () => Google.fromEnv({ ...baseEnv, PLURNK_PROVIDERS_THINKING: "8192" }, "gemini-2.5-flash"),
-        /PLURNK_PROVIDERS_THINKING must be one of/,
+        () => Google.fromEnv({ ...baseEnv, PLURNK_PROVIDERS_REASONING: "8192" }, "gemini-2.5-flash"),
+        /PLURNK_PROVIDERS_REASONING must be one of/,
     );
 });
 

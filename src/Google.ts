@@ -8,7 +8,7 @@ import {
     OpenAICompatProvider,
     computeCost,
     parseRequiredInt,
-    thinkingFromEnv,
+    reasoningFromEnv,
     dataCaptureFromEnv,
     parseRequiredFloat,
     providerSource,
@@ -64,7 +64,7 @@ export default class Google {
         // silently hijacking the intended key). Both are first-class in the wild.
         const apiKey = requireEnv(env.GEMINI_API_KEY || env.GOOGLE_API_KEY, "GEMINI_API_KEY or GOOGLE_API_KEY", "google");
         const fetchTimeoutMs = parseRequiredInt(env.PLURNK_PROVIDERS_FETCH_TIMEOUT, "PLURNK_PROVIDERS_FETCH_TIMEOUT", "google");
-        const thinking = thinkingFromEnv(env, "google");
+        const reasoning = reasoningFromEnv(env, "google");
 
         const contextSize = await fetchContextSize({ apiKey, model, fetchTimeoutMs });
         const pricing = pricingForModel(model);
@@ -75,9 +75,10 @@ export default class Google {
             fetchTimeoutMs,
             headers: { Authorization: `Bearer ${apiKey}` },
             contextSize,
-            thinking,
+            reasoning,
             temperature: parseRequiredFloat(env.PLURNK_PROVIDERS_TEMPERATURE, "PLURNK_PROVIDERS_TEMPERATURE", "google", 0),
             repeatPenalty: parseRequiredFloat(env.PLURNK_PROVIDERS_REPEAT_PENALTY, "PLURNK_PROVIDERS_REPEAT_PENALTY", "google", 0),
+            frequencyPenalty: parseRequiredFloat(env.PLURNK_PROVIDERS_FREQUENCY_PENALTY, "PLURNK_PROVIDERS_FREQUENCY_PENALTY", "google", 0),
             retryDelayMs: parseRequiredInt(env.PLURNK_PROVIDERS_RETRY_DELAY, "PLURNK_PROVIDERS_RETRY_DELAY", "google"),
             retryAttempts: parseRequiredInt(env.PLURNK_PROVIDERS_RETRY_ATTEMPTS, "PLURNK_PROVIDERS_RETRY_ATTEMPTS", "google"),
             // Opt-in data capture (#36), off by default, per-alias-scopable.
