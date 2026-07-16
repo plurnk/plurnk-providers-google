@@ -91,10 +91,10 @@ test("fromEnv: throws when PLURNK_PROVIDERS_REASONING is not a valid mode", asyn
 
 // — model-info probe —
 
-test("fromEnv: resolves contextSize from /v1beta/models/{model}", async () => {
+test("fromEnv: resolves contextWindow from /v1beta/models/{model}", async () => {
     mockModelInfo({ inputTokenLimit: 1_048_576 });
     const p = await Google.fromEnv({ ...baseEnv }, "gemini-2.5-flash");
-    assert.equal(p.contextSize, 1_048_576);
+    assert.equal(p.contextWindow, 1_048_576);
     assert.equal(p.model, "gemini-2.5-flash");
 });
 

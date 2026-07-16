@@ -66,7 +66,7 @@ export default class Google {
         const fetchTimeoutMs = parseRequiredInt(env.PLURNK_PROVIDERS_FETCH_TIMEOUT, "PLURNK_PROVIDERS_FETCH_TIMEOUT", "google");
         const reasoning = reasoningFromEnv(env, "google");
 
-        const contextSize = await fetchContextSize({ apiKey, model, fetchTimeoutMs });
+        const contextWindow = await fetchContextWindow({ apiKey, model, fetchTimeoutMs });
         const pricing = pricingForModel(model);
 
         return new OpenAICompatProvider({
@@ -74,7 +74,7 @@ export default class Google {
             url: `${BASE_URL}/openai/chat/completions`,
             fetchTimeoutMs,
             headers: { Authorization: `Bearer ${apiKey}` },
-            contextSize,
+            contextWindow,
             reasoning,
             temperature: parseRequiredFloat(env.PLURNK_PROVIDERS_TEMPERATURE, "PLURNK_PROVIDERS_TEMPERATURE", "google", 0),
             repeatPenalty: parseRequiredFloat(env.PLURNK_PROVIDERS_REPEAT_PENALTY, "PLURNK_PROVIDERS_REPEAT_PENALTY", "google", 0),
@@ -99,7 +99,7 @@ export default class Google {
 // per Google's docs). Returns model metadata including inputTokenLimit.
 type ModelInfoResponse = { inputTokenLimit?: number };
 
-const fetchContextSize = async ({
+const fetchContextWindow = async ({
     apiKey, model, fetchTimeoutMs,
 }: { apiKey: string; model: string; fetchTimeoutMs: number }): Promise<number> => {
     const url = `${BASE_URL}/models/${encodeURIComponent(model)}?key=${encodeURIComponent(apiKey)}`;
