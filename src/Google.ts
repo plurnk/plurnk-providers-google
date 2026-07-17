@@ -15,6 +15,7 @@ import {
     requireEnv,
     type Provider,
     type ProviderUsage,
+    envelopeFromEnv,
 } from "@plurnk/plurnk-providers";
 
 const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
@@ -79,6 +80,8 @@ export default class Google {
             temperature: parseRequiredFloat(env.PLURNK_PROVIDERS_TEMPERATURE, "PLURNK_PROVIDERS_TEMPERATURE", "google", 0),
             repeatPenalty: parseRequiredFloat(env.PLURNK_PROVIDERS_REPEAT_PENALTY, "PLURNK_PROVIDERS_REPEAT_PENALTY", "google", 0),
             frequencyPenalty: parseRequiredFloat(env.PLURNK_PROVIDERS_FREQUENCY_PENALTY, "PLURNK_PROVIDERS_FREQUENCY_PENALTY", "google", 0),
+            // #507: envelope reserves (window-fraction floor, absolute overrides).
+            ...envelopeFromEnv(env, "google"),
             retryDelayMs: parseRequiredInt(env.PLURNK_PROVIDERS_RETRY_DELAY, "PLURNK_PROVIDERS_RETRY_DELAY", "google"),
             retryAttempts: parseRequiredInt(env.PLURNK_PROVIDERS_RETRY_ATTEMPTS, "PLURNK_PROVIDERS_RETRY_ATTEMPTS", "google"),
             // Opt-in data capture (#36), off by default, per-alias-scopable.
