@@ -13,9 +13,10 @@ import {
     parseRequiredFloat,
     providerSource,
     requireEnv,
+    envelopeFromEnv,
     type Provider,
     type ProviderUsage,
-    envelopeFromEnv,
+    type ReserveSpec,
 } from "@plurnk/plurnk-providers";
 
 const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
@@ -67,8 +68,28 @@ export default class Google {
         const fetchTimeoutMs = parseRequiredInt(env.PLURNK_PROVIDERS_FETCH_TIMEOUT, "PLURNK_PROVIDERS_FETCH_TIMEOUT", "google");
         const reasoning = reasoningFromEnv(env, "google");
 
-        const contextWindow = await fetchContextWindow({ apiKey, model, fetchTimeoutMs });
+        const { contextWindow, maxOutput } = await fetchModelInfo({ apiKey, model, fetchTimeoutMs });
         const pricing = pricingForModel(model);
+
+        // #507: completion cap — live outputTokenLimit caps the env percentage, same
+        // logic as standardProviders' catalog maxOutput cap. An operator absolute pin
+        // (COMPLETION_RESERVE=8192 not "25%") always wins. Gemini reports outputTokenLimit
+        // on the same /v1beta/models/{model} call as inputTokenLimit.
+        const { reasoningReserve: envReasoning, completionReserve: envCompletion } = envelopeFromEnv(env, "google");
+        const completionReserve: ReserveSpec = (() => {
+            if ("tokens" in envCompletion) return envCompletion; // operator absolute always wins
+            if (maxOutput === undefined) return envCompletion;
+            return { tokens: Math.min(maxOutput, Math.round(envCompletion.percent * contextWindow)) };
+        })();
+        // #568: reasoning reserve — exact REASONING_BUDGET > half-completion > env%.
+        const resolvedCompletion = "tokens" in completionReserve
+            ? completionReserve.tokens
+            : Math.round(completionReserve.percent * contextWindow);
+        const reasoningReserve: ReserveSpec = (() => {
+            if ("tokens" in envReasoning) return envReasoning; // operator absolute always wins
+            if (reasoning.budget !== null) return { tokens: reasoning.budget }; // exact budget when reasoning=on
+            return { tokens: Math.round(resolvedCompletion / 2) }; // half-completion for adaptive
+        })();
 
         return new OpenAICompatProvider({
             model,
@@ -85,8 +106,8 @@ export default class Google {
             // Sending the PLURNK_PROVIDERS_FREQUENCY_PENALTY floor (0.4) 400s every call. A
             // caller still passes a penalty via `sampling` if a future model accepts it;
             // omitting -> OpenAICompat's 0-default (nothing sent). Mirrors xai (providers-xai#2).
-            // #507: envelope reserves (window-fraction floor, absolute overrides).
-            ...envelopeFromEnv(env, "google"),
+            reasoningReserve,
+            completionReserve,
             retryDelayMs: parseRequiredInt(env.PLURNK_PROVIDERS_RETRY_DELAY, "PLURNK_PROVIDERS_RETRY_DELAY", "google"),
             retryAttempts: parseRequiredInt(env.PLURNK_PROVIDERS_RETRY_ATTEMPTS, "PLURNK_PROVIDERS_RETRY_ATTEMPTS", "google"),
             // Opt-in data capture (#36), off by default, per-alias-scopable.
@@ -104,12 +125,13 @@ export default class Google {
 }
 
 // /v1beta/models/{model} requires `?key=` (Bearer 401s on this endpoint
-// per Google's docs). Returns model metadata including inputTokenLimit.
-type ModelInfoResponse = { inputTokenLimit?: number };
+// per Google's docs). Returns inputTokenLimit (context window) and outputTokenLimit
+// (the model's hard completion cap, used to bound completionReserve; #507/#568).
+type ModelInfoResponse = { inputTokenLimit?: number; outputTokenLimit?: number };
 
-const fetchContextWindow = async ({
+const fetchModelInfo = async ({
     apiKey, model, fetchTimeoutMs,
-}: { apiKey: string; model: string; fetchTimeoutMs: number }): Promise<number> => {
+}: { apiKey: string; model: string; fetchTimeoutMs: number }): Promise<{ contextWindow: number; maxOutput: number | undefined }> => {
     const url = `${BASE_URL}/models/${encodeURIComponent(model)}?key=${encodeURIComponent(apiKey)}`;
     const res = await fetch(url, { signal: AbortSignal.timeout(fetchTimeoutMs) });
     if (!res.ok) {
@@ -120,5 +142,8 @@ const fetchContextWindow = async ({
     if (data.inputTokenLimit === undefined || data.inputTokenLimit <= 0) {
         throw new Error(`Gemini /v1beta/models/${model} has no inputTokenLimit`);
     }
-    return data.inputTokenLimit;
+    const maxOutput = typeof data.outputTokenLimit === "number" && data.outputTokenLimit > 0
+        ? data.outputTokenLimit
+        : undefined;
+    return { contextWindow: data.inputTokenLimit, maxOutput };
 };
