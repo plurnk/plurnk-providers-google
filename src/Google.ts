@@ -79,7 +79,12 @@ export default class Google {
             reasoning,
             temperature: parseRequiredFloat(env.PLURNK_PROVIDERS_TEMPERATURE, "PLURNK_PROVIDERS_TEMPERATURE", "google", 0),
             repeatPenalty: parseRequiredFloat(env.PLURNK_PROVIDERS_REPEAT_PENALTY, "PLURNK_PROVIDERS_REPEAT_PENALTY", "google", 0),
-            frequencyPenalty: parseRequiredFloat(env.PLURNK_PROVIDERS_FREQUENCY_PENALTY, "PLURNK_PROVIDERS_FREQUENCY_PENALTY", "google", 0),
+            // No frequency_penalty on google: Gemini's OpenAI-compat endpoint REJECTS it
+            // (400 -- measured against gemini-2.5-flash, capability-probe #568), along with
+            // presence/repetition_penalty and top_k/min_p; it honors only temperature + top_p.
+            // Sending the PLURNK_PROVIDERS_FREQUENCY_PENALTY floor (0.4) 400s every call. A
+            // caller still passes a penalty via `sampling` if a future model accepts it;
+            // omitting -> OpenAICompat's 0-default (nothing sent). Mirrors xai (providers-xai#2).
             // #507: envelope reserves (window-fraction floor, absolute overrides).
             ...envelopeFromEnv(env, "google"),
             retryDelayMs: parseRequiredInt(env.PLURNK_PROVIDERS_RETRY_DELAY, "PLURNK_PROVIDERS_RETRY_DELAY", "google"),
