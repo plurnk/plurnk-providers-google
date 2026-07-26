@@ -66,6 +66,7 @@ export default class Google {
         // silently hijacking the intended key). Both are first-class in the wild.
         const apiKey = requireEnv(env.GEMINI_API_KEY || env.GOOGLE_API_KEY, "GEMINI_API_KEY or GOOGLE_API_KEY", "google");
         const fetchTimeoutMs = parseRequiredInt(env.PLURNK_PROVIDERS_FETCH_TIMEOUT, "PLURNK_PROVIDERS_FETCH_TIMEOUT", "google");
+        const streamIdleTimeoutMs = parseRequiredInt(env.PLURNK_PROVIDERS_STREAM_IDLE_TIMEOUT, "PLURNK_PROVIDERS_STREAM_IDLE_TIMEOUT", "google");
         const reasoning = reasoningFromEnv(env, "google");
 
         const { contextWindow, maxOutput } = await fetchModelInfo({ apiKey, model, fetchTimeoutMs });
@@ -95,6 +96,7 @@ export default class Google {
             model,
             url: `${BASE_URL}/openai/chat/completions`,
             fetchTimeoutMs,
+            streamIdleTimeoutMs,
             headers: { Authorization: `Bearer ${apiKey}` },
             contextWindow,
             reasoning,
